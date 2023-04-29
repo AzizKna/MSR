@@ -1,0 +1,475 @@
+---
+title: "MSR try 2 - 580953"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+install.packages("readr")
+library(tidyverse)
+library(googlesheets4)
+library(class)
+library(caret)
+
+# read data from URL
+url2 <- "https://raw.githubusercontent.com/AzizKna/MSR/main/1580953alienation_data.csv"
+
+MSR_data2 <- read_csv(url2)
+str(MSR_data2)
+
+```
+
+```{r}
+
+#split comlumns into different data frames
+alienation <- MSR_data2[, 1]
+income_dollars <- MSR_data2[, 2]
+gender <- MSR_data2[, 3]
+consult_result <- MSR_data2[, 4]
+
+```
+
+```{r}
+# Replace NA values with the mean of the non-missing data in each column
+income_dollars[is.na(income_dollars)] <- sapply(income_dollars, function(x) mean(x, na.rm = TRUE))
+
+#NEW
+MSR_data2$income[is.na(MSR_data2$income)] <- mean(MSR_data2$income, na.rm = TRUE)
+
+
+```
+
+```{r}
+#find income in dollars mean
+mean(income_dollars$income, na.rm = TRUE)
+
+```
+
+```{r}
+#find alienation score mean and make sure data is numeric
+MSR_data2$alienation <- as.numeric(MSR_data2$alienation)
+mean(MSR_data2$alienation, na.rm = TRUE)
+
+```
+
+```{r}
+#find alienation median
+median(MSR_data2$alienation)
+```
+
+```{r}
+#range of scores alienation
+(min_alienation1 <- min(alienation))
+(max_alienation1 <- max(alienation))
+cat("The range of scores on alienation is", max_alienation1 - min_alienation1)
+```
+
+```{r}
+#Standard Deviation of alienation
+(alien_mean1 <- mean(MSR_data2$alienation, na.rm = TRUE))
+
+alien1dev    <- alienation - alien_mean1
+alien1sqdev  <- alien1dev * alien1dev
+(cbind(alien1dev,alien1sqdev))
+```
+
+```{r}
+##Standard Deviation of alienation
+alienation_fixed <- unlist(alienation)
+sd(MSR_data2$alienation, na.rm = TRUE)
+```
+
+```{r}
+#Histogram alienation
+library (ggplot2)
+
+ggplot(data = MSR_data2, aes(x = alienation)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "red") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1)) +
+  labs(title = "Alienation Scores", x = "Alienation", y = "Frequency") +
+  stat_function(fun = dnorm, args = list(mean = mean(MSR_data2$alienation), sd = sd(MSR_data2$alienation)))
+
+
+
+#the results show that the distribution is negatively skewed and not normally distributed with highest frequency at score 1 alienation, then 5, then 10. Lowest score os 6
+
+shapiro.test(MSR_data2$alienation)
+
+#The test statistic is W = 0.92804 and the p-value is 3.86e-05 (a very small value).
+
+#Based on the p-value, we would reject the null hypothesis that the data is normally distributed, and conclude that the data is not likely to have come from a normally distributed population.
+```
+
+```{r}
+#male respondents table:
+male_data_only <- filter(MSR_data2, male == 1)
+```
+
+```{r}
+#Other gender respondents table:
+#male respondents table:
+female_data_only <- filter(MSR_data2, male == 0)
+```
+
+#histogram
+
+#hist(male_data_only\$alienation, breaks=10, col="red")
+
+ggplot(data = male_data_only\$alienation, aes(x = alienation)) +
+
+geom_histogram(binwidth = 1, color = "black", fill = "red") +
+
+scale_x\_continuous(breaks = seq(0, 10, by = 1)) +
+
+labs(title = "Alienation Scores", x = "Alienation", y = "Frequency") +
+
+stat_function(fun = dnorm, args = list(mean = mean(male_data_only\$alienation), sd = sd(male_data_only\$alienation)))
+
+```{r}
+#1-6 repeated for male and female
+#male:
+#mean:
+mean(male_data_only$alienation, na.rm = TRUE)
+
+#Median:
+median(male_data_only$alienation, na.rm = TRUE)
+
+# Range:
+cat("The range of scores on alienation for males is", max(male_data_only$alienation, na.rm = TRUE) - min(male_data_only$alienation, na.rm = TRUE), "\n")
+
+# Standard deviation:
+cat("The standard deviation of scores on alienation for males is", sd(male_data_only$alienation, na.rm = TRUE), "\n")
+
+
+#histogram
+
+ggplot(data = male_data_only, aes(x = alienation)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "red") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1)) +
+  labs(title = " Male Only Alienation Scores", x = "Alienation", y = "Frequency") +
+  stat_function(fun = dnorm, args = list(mean = mean(male_data_only$alienation), sd = sd(male_data_only$alienation)), color = "blue") +
+  coord_cartesian(xlim = c(0, 10))
+
+
+
+#the results show that the distribution is more normally distributed but not perfectly bell shaped with highest frequency at score 6 alienation, then 5, then 3. Lowest score is 10
+
+shapiro.test(male_data_only$alienation)
+
+#The test result shows a W statistic of 0.95295 and a p-value of 0.0389. Based on this, we can conclude that the alienation variable in the male_data_only dataset is not normally distributed as the p-value is less than the commonly used alpha level of 0.05.
+```
+
+```{r}
+#1-6 repeated for male and female
+#female:
+#mean:
+mean(female_data_only$alienation, na.rm = TRUE)
+
+#Median:
+median(female_data_only$alienation, na.rm = TRUE)
+
+# Range:
+cat("The range of scores on alienation for females is", max(female_data_only$alienation, na.rm = TRUE) - min(female_data_only$alienation, na.rm = TRUE), "\n")
+
+# Standard deviation:
+cat("The standard deviation of scores on alienation for females is", sd(female_data_only$alienation, na.rm = TRUE), "\n")
+
+#histogram
+
+ggplot(data = female_data_only, aes(x = alienation)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "red") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1)) +
+  labs(title = " Female Only Alienation Scores", x = "Alienation", y = "Frequency") +
+  stat_function(fun = dnorm, args = list(mean = mean(female_data_only$alienation), sd = sd(female_data_only$alienation)), color = "blue") +
+  coord_cartesian(xlim = c(0, 10))
+
+
+shapiro.test(female_data_only$alienation)
+
+#the results show that the distribution is more extreme toward both right and left and not normally distributed with highest frequency at score 1 alienation, then 10, Lowest scpre is 0 at 6
+
+#The test resulted in a W value of 0.86604 and a p-value of 5.967e-05. This indicates that the data does not follow a normal distribution, and is significantly different from a normal distribution.
+```
+
+```{}
+```
+
+```{r}
+#`1-7 repeated for income in dollars
+#mean
+mean(income_dollars$income, na.rm = TRUE)
+
+#median
+median(income_dollars$income, na.rm = TRUE)
+
+#range`
+cat("The range of scores on income in dollarsin general is", max(MSR_data2$income, na.rm = TRUE) - min(MSR_data2$income, na.rm = TRUE), "\n")
+
+# Standard deviation:
+cat("The standard deviation of income in dollars in general is", sd(MSR_data2$income, na.rm = TRUE), "\n")
+
+
+#histogram
+
+ggplot(data = MSR_data2, aes(x = income)) +
+  geom_histogram(binwidth = 10000, color = "black", fill = "red") +
+  scale_x_continuous(breaks = seq(0, 150000, by = 10000), labels = function(x) ifelse(x >= 10000, paste0(x/1000, "k"), as.character(x))) +
+  labs(title = "Income Range Scores", x = "Income", y = "Range") +
+  stat_function(fun = dnorm, args = list(mean = mean(MSR_data2$income, na.rm = TRUE), sd = sd(MSR_data2$income, na.rm = TRUE)), color = "blue") +
+  coord_cartesian(xlim = c(0, 150000))
+
+#distribution is not normally distributed and the histogram seems to be more negatively skewed with highest frequency at 100k 
+
+```
+
+```{r}
+shapiro.test(MSR_data2$income)
+
+#the test resulted in a W value of 0.96615 and a p-value of 0.0113. The p-value is less than the commonly used threshold of 0.05, which suggests that the income data may not come from a normal distribution.
+```
+
+#
+
+```{#distribution reflection}
+#distribution is not normally distributed and the histogram seems to be more negatively skewed with highest frequency at 9k and 1k
+
+
+```
+
+```{r}
+#`1-7 repeated for income in dollars for males
+
+#male:
+#mean:
+mean(male_data_only$income, na.rm = TRUE)
+
+#Median:
+median(male_data_only$income, na.rm = TRUE)
+
+# Range:
+cat("The range of scores on income in dollars for males is", max(male_data_only$income, na.rm = TRUE) - min(male_data_only$income, na.rm = TRUE), "\n")
+
+# Standard deviation:
+cat("The standard deviation of scores on income in dollars for males is", sd(male_data_only$income, na.rm = TRUE), "\n")
+
+
+#histogram
+
+ggplot(data = male_data_only, aes(x = income)) +
+  geom_histogram(binwidth = 10000, color = "black", fill = "red") +
+  scale_x_continuous(breaks = seq(0, 150000, by = 10000), labels = function(x) ifelse(x >= 10000, paste0(x/1000, "k"), as.character(x))) +
+  labs(title = "Male Income Range Scores", x = "Income", y = "Range") +
+  stat_function(fun = dnorm, args = list(mean = mean(male_data_only$income, na.rm = TRUE), sd = sd(male_data_only$income, na.rm = TRUE)), color = "blue") +
+  coord_cartesian(xlim = c(0, 150000))
+
+
+#the results show that the distribution is more normally distributed but not perfectly bell shaped with a spike for highest frequency at 30k, then 8k & 9k is next highest scores.
+
+shapiro.test(male_data_only$income)
+
+#The test statistic W was found to be 0.97964, which is quite close to 1, indicating that the data is quite normally distributed. The p-value was found to be 0.5108, which is greater than the significance level of 0.05, indicating that there is not enough evidence to reject the null hypothesis that the data is normally distributed. Therefore, we can conclude that the 'income' variable of the 'male_data_only' subset is normally distributed.
+```
+
+```{r}
+#`1-7 repeated for income in dollars for females
+
+#females:
+#mean:
+mean(female_data_only$income, na.rm = TRUE)
+
+#Median:
+median(female_data_only$income, na.rm = TRUE)
+
+# Range:
+cat("The range of scores on income in dollars for females is", max(female_data_only$income, na.rm = TRUE) - min(female_data_only$income, na.rm = TRUE), "\n")
+
+# Standard deviation:
+cat("The standard deviation of scores on income in dollars for females is", sd(female_data_only$income, na.rm = TRUE), "\n")
+
+
+#histogram
+#hist(female_data_only$income, breaks=10, col="red")
+
+ggplot(data = female_data_only, aes(x = income)) +
+  geom_histogram(binwidth = 10000, color = "black", fill = "red") +
+  scale_x_continuous(breaks = seq(0, 150000, by = 10000), labels = function(x) ifelse(x >= 10000, paste0(x/1000, "k"), as.character(x))) +
+  labs(title = "Female Income Range Scores", x = "Income", y = "Range") +
+  stat_function(fun = dnorm, args = list(mean = mean(female_data_only$income, na.rm = TRUE), sd = sd(female_data_only$income, na.rm = TRUE)), color = "blue") +
+  coord_cartesian(xlim = c(0, 150000))
+
+
+#the results show that the distribution is NOT normally distributed with a spike for highest frequency at less than 10k, the distribution seems to be negatively skewed.
+
+shapiro.test(female_data_only$income)
+```
+
+```{r}
+#How many data in your sample are missing? What to do with missing data?
+#there was 2 NA results in income, I already replaced the values with the mean using this
+#income_dollars[is.na(income_dollars)] <- sapply(income_dollars, function(x) mean(x, na.rm = TRUE))
+```
+```{r}
+table(MSR_data2$consult)
+table(male_data_only$consult)
+table(female_data_only$consult)
+
+```
+```{r}
+
+
+
+#another
+
+# load the package
+library(VennDiagram)
+
+# Create a list with the data for each group
+male <- which(MSR_data2$male == 1)
+female <- which(MSR_data2$male == 0)
+consulted <- which(MSR_data2$consult == 1)
+
+# Create a Venn diagram
+venn.diagram(
+  x = list("Male" = male, "Female" = female),
+  filename = "gender_venn.png",
+  col = "transparent",
+  fill = c("dodgerblue", "goldenrod1"),
+  alpha = 0.5,
+  cex = 1.5,
+  fontfamily = "serif",
+  fontface = "bold",
+  cat.fontfamily = "serif",
+  cat.fontface = "bold",
+  category.names = c("Male", "Female"),
+  margin = 0.05
+)
+
+# Create a Venn diagram with 3 groups
+venn.diagram(
+  x = list("Male" = male, "Female" = female, "Consulted" = consulted),
+  filename = "gender_consult_venn.png",
+  col = "transparent",
+  fill = c("dodgerblue", "goldenrod1", "darkorange"),
+  alpha = 0.5,
+  cex = 1.5,
+  fontfamily = "serif",
+  fontface = "bold",
+  cat.fontfamily = "serif",
+  cat.fontface = "bold",
+  category.names = c("Male", "Female", "Consulted"),
+  margin = 0.05
+)
+
+```
+```{r}
+#exchange rate = 0.9 euro to every dollar
+income_eur <- data.frame(income = income_dollars$income * 0.9)
+```
+
+```{r}
+#mean
+mean(income_eur$income, na.rm = TRUE)
+
+#median
+median(income_eur$income, na.rm = TRUE)
+
+#range`
+cat("The range of scores on income in euros in general is", max(income_eur$income, na.rm = TRUE) - min(income_eur$income, na.rm = TRUE), "\n")
+
+# Standard deviation:
+cat("The standard deviation of income in euros in general is", sd(income_eur$income, na.rm = TRUE), "\n")
+
+#The mean and median of income in euros are 56027.06 and 56806.14, respectively, while the mean and median of income in dollars are 61386.66 and 63117.93, respectively. This shows that the mean and median of income in dollars are higher than the mean and median of income in euros.
+
+#Similarly, the range of scores and standard deviation of income in dollars are higher than those of income in euros. The range of scores of income in dollars is 135100, while that of income in euros is 121590. The standard deviation of income in dollars is 35711.75, while that of income in euros is 32140.58.
+
+#This difference in values is due to the exchange rate used for conversion. A lower exchange rate means that the euro income values will be lower than the dollar income values, resulting in a lower mean and median, as well as a lower range of scores and standard deviation for income in euros as compared to income in dollars.
+
+```
+```{r}
+
+class(MSR_data2$income)
+# Calculate the sample mean of income
+mean_income <- mean(MSR_data2$income)
+
+# Create a new variable for centered income
+centered_income <- MSR_data2$income - mean_income
+
+# Print the centered income variable
+centered_income
+
+```
+```{r}
+mean(centered_income)
+
+
+sd(centered_income, na.rm = TRUE)
+```
+```{r}
+n <- 6 # total number of respondents
+k <- 3 # number of respondents to be selected
+comb <- choose(n, k)
+comb
+```
+```{r}
+# Calculate the number of different groups with 2 males and 4 females
+n_male <- 2
+n_female <- 4
+
+# Calculate the total number of different groups of 3 people
+total_groups <- choose(n_male + n_female, 3)
+
+# Calculate the number of groups with exactly 1 male
+groups_1_male <- choose(n_male, 1) * choose(n_female, 2)
+
+# Print the result
+groups_1_male
+```
+```{r}
+# Calculate the number of groups with exactly 1 male
+groups_1_female <- choose(n_male, 2) * choose(n_female, 1)
+# Print the result
+groups_1_female
+```
+```{r}
+# Set up the equations
+eq1 <- function(x) {5.56 - 0.073 * x}
+eq2 <- function(x) {4.80 - 0.030 * x}
+
+# Use the uniroot function to solve for the income level at which the equations are equal
+income_level <- uniroot(function(x) {eq1(x) - eq2(x)}, c(0, 100))$root
+
+# Print the income level
+ round(income_level, 2)
+
+```
+```{r}
+t.test(alienation ~ male, data = MSR_data2)
+#Based on the Welch two-sample t-test, we can conclude that there is no significant difference in alienation between male and female respondents in your sample. The p-value of 0.2079 is greater than the commonly used significance level of 0.05, which suggests that we fail to reject the null hypothesis that there is no difference in alienation between males and females. 
+
+```
+
+
+
+```
